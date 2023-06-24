@@ -478,19 +478,17 @@ public class Deploy extends AbstractServerTask {
 		String moduleVersion;
 
 		File userDir = new File(System.getProperty("user.dir"));
-		Project project = null;
-		if (Project.hasProject(userDir)) {
-			project = Project.loadProject(userDir);
-		}
-		if (artifactId == null && project != null && project.isOpenmrsModule()) {
-			if (project.getParent() != null && !"org.openmrs.maven.parents".equals(project.getParent().getGroupId())) {
-				moduleGroupId = project.getParent().getGroupId();
-				moduleArtifactId = project.getParent().getArtifactId() + "-omod";
-				moduleVersion = (version != null) ? version : project.getParent().getVersion();
+		Optional<Project> project = Project.hasProject(userDir) ? Optional.of(Project.loadProject(userDir)) : Optional.empty();
+
+		if (artifactId == null && project.isPresent() && project.get().isOpenmrsModule()) {
+			if (project.get().getParent() != null && !"org.openmrs.maven.parents".equals(project.get().getParent().getGroupId())) {
+				moduleGroupId = project.get().getParent().getGroupId();
+				moduleArtifactId = project.get().getParent().getArtifactId() + "-omod";
+				moduleVersion = (version != null) ? version : project.get().getParent().getVersion();
 			} else {
-				moduleGroupId = project.getGroupId();
-				moduleArtifactId = project.getArtifactId() + "-omod";
-				moduleVersion = (version != null) ? version : project.getVersion();
+				moduleGroupId = project.get().getGroupId();
+				moduleArtifactId = project.get().getArtifactId() + "-omod";
+				moduleVersion = (version != null) ? version : project.get().getVersion();
 			}
 		} else {
 			moduleGroupId = wizard.promptForValueIfMissingWithDefault(null, groupId, "groupId", Artifact.GROUP_MODULE);
@@ -509,14 +507,12 @@ public class Deploy extends AbstractServerTask {
 
 	public boolean checkCurrentDirForModuleProject() throws MojoExecutionException {
 		File dir = new File(System.getProperty("user.dir"));
-		Project project = null;
-		if (Project.hasProject(dir)) {
-			project = Project.loadProject(dir);
-		}
-		boolean hasProject = (project != null && project.isOpenmrsModule());
+		Optional<Project> project = Project.hasProject(dir) ? Optional.of(Project.loadProject(dir)) : Optional.empty();
+
+		boolean hasProject = project.map(Project::isOpenmrsModule).orElse(false);
 		if (hasProject) {
 			hasProject = wizard.promptYesNo(String.format("Would you like to deploy %s %s from the current directory?",
-					project.getArtifactId(), project.getVersion()));
+					project.get().getArtifactId(), project.get().getVersion()));
 		}
 		return hasProject;
 	}

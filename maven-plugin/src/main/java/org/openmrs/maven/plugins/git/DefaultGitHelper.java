@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.openmrs.maven.plugins.Clone.GITHUB_COM;
 
@@ -340,8 +341,8 @@ public class DefaultGitHelper implements GitHelper {
 	 */
 	@Override
 	public boolean deleteTag(Git git, String tag, String username, String password) throws MojoExecutionException {
-		Ref tagRef = git.getRepository().getTags().get(tag);
-		if (tagRef != null) {
+		Optional<Ref> tagRef = Optional.ofNullable(git.getRepository().getTags().get(tag));
+		if (tagRef.isPresent()) {
 			try {
 				//delete remote tag, if
 				UsernamePasswordCredentialsProvider credentialsProvider = new UsernamePasswordCredentialsProvider(username,
@@ -351,7 +352,7 @@ public class DefaultGitHelper implements GitHelper {
 						.add(":" + tagRef)
 						.setRemote("upstream")
 						.call();
-				git.tagDelete().setTags(tagRef.getName()).call();
+				git.tagDelete().setTags(tagRef.get().getName()).call();
 				return true;
 			}
 			catch (GitAPIException e) {
@@ -412,9 +413,9 @@ public class DefaultGitHelper implements GitHelper {
 		String scmOwnerUrlPart = "/" + scmOwner + "/";
 		String originUrl = scmUrl.replace(scmOwnerUrlPart, "/" + username + "/");
 
-		RemoteConfig origin = getRemote(git, originName);
-		if (origin != null) {
-			if (!hasUri(origin, originUrl)) {
+		Optional<RemoteConfig> origin = Optional.ofNullable(getRemote(git, originName));
+		if (origin.isPresent()) {
+			if (!hasUri(origin.get(), originUrl)) {
 				removeRemote(git, originName);
 				addRemote(git, originName, originUrl);
 			}

@@ -48,11 +48,11 @@ public class Help extends AbstractTask {
             for (Map<String, Object> o: l) {
                 Options options = new Options();
                 @SuppressWarnings("unchecked")
-                List<Map<String, Object>> params = (List<Map<String, Object>>) o.get("options");
+                Optional<List<Map<String, Object>>> params = Optional.ofNullable((List<Map<String, Object>>) o.get("options"));
                 String header = (o.get("desc") != null) ? o.get("desc").toString() : "None";
                 header = DESC_MESSAGE.concat(header);
-                if (params != null) {
-                    for (Map<String, Object> x: params) {
+                if (params.isPresent()) {
+                    for (Map<String, Object> x: params.get()) {
                         String name = x.get("name").toString();
                         String desc = x.get("desc").toString();
                         if ((name == null) || (desc == null)) throw new MojoExecutionException("Error in help file structure");
