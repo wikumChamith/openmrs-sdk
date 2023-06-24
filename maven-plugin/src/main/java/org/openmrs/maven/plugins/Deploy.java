@@ -20,6 +20,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
@@ -93,12 +94,12 @@ public class Deploy extends AbstractServerTask {
 		ServerUpgrader serverUpgrader = new ServerUpgrader(this);
 
 		if ((platform == null && distro == null && owa == null) && artifactId == null) {
-			Artifact artifact = checkCurrentDirectoryForOpenmrsWebappUpdate(server);
-			DistroProperties distroProperties = checkCurrentDirectoryForDistroProperties();
-			if (artifact != null) {
-				deployOpenmrsFromDir(server, artifact);
-			} else if (distroProperties != null) {
-				serverUpgrader.upgradeToDistro(server, distroProperties);
+			Optional<Artifact> artifact = Optional.ofNullable(checkCurrentDirectoryForOpenmrsWebappUpdate(server));
+			Optional<DistroProperties> distroProperties = Optional.ofNullable(checkCurrentDirectoryForDistroProperties());
+			if (artifact.isPresent()) {
+				deployOpenmrsFromDir(server, artifact.get());
+			} else if (distroProperties.isPresent()) {
+				serverUpgrader.upgradeToDistro(server, distroProperties.get());
 			} else if (checkCurrentDirForModuleProject()) {
 				deployModule(groupId, artifactId, version, server);
 			} else {
@@ -446,16 +447,16 @@ public class Deploy extends AbstractServerTask {
 	}
 
 	private DistroProperties checkCurrentDirectoryForDistroProperties() throws MojoExecutionException {
-		DistroProperties distroProperties = DistroHelper.getDistroPropertiesFromDir();
-		if (distroProperties != null) {
+		Optional<DistroProperties> distroProperties = Optional.ofNullable(DistroHelper.getDistroPropertiesFromDir());
+		if (distroProperties.isPresent()) {
 			String message = String.format(
 					"Would you like to deploy %s %s from the current directory?",
-					distroProperties.getName(),
-					distroProperties.getVersion());
+					distroProperties.get().getName(),
+					distroProperties.get().getVersion());
 
 			boolean agree = wizard.promptYesNo(message);
 			if (agree) {
-				return distroProperties;
+				return distroProperties.get();
 			}
 		}
 

@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class SpaInstaller {
@@ -53,17 +54,17 @@ public class SpaInstaller {
 		Map<String, String> spaProperties = distroProperties.getSpaProperties(distroHelper, appDataDir);
 
 		// Three of these properties are not passed to the build tool, but are used to specify the build execution itself
-		String coreVersion = spaProperties.remove("core");
-		if (coreVersion == null) {
-			coreVersion = "latest";
+		Optional<String> coreVersion = Optional.ofNullable(spaProperties.remove("core"));
+		if (!coreVersion.isPresent()) {
+			coreVersion = Optional.of("latest");
 		}
-		String nodeVersion = spaProperties.remove("node");
-		if (nodeVersion == null) {
-			nodeVersion = NODE_VERSION;
+		Optional<String> nodeVersion = Optional.ofNullable(spaProperties.remove("node"));
+		if (!nodeVersion.isPresent()) {
+			nodeVersion = Optional.of(NODE_VERSION);
 		}
-		String npmVersion = spaProperties.remove("npm");
-		if (npmVersion == null) {
-			npmVersion = NPM_VERSION;
+		Optional<String> npmVersion = Optional.ofNullable(spaProperties.remove("npm"));
+		if (!npmVersion.isPresent()) {
+			npmVersion = Optional.of(NPM_VERSION);
 		}
 
 		if (!spaProperties.isEmpty()) {
@@ -72,7 +73,7 @@ public class SpaInstaller {
 			File spaConfigFile = new File(appDataDir, "spa-build-config.json");
 			writeJSONObject(spaConfigFile, spaConfigJson);
 
-			nodeHelper.installNodeAndNpm(nodeVersion, npmVersion);
+			nodeHelper.installNodeAndNpm(nodeVersion.get(), npmVersion.get());
 			File buildTargetDir = new File(appDataDir, BUILD_TARGET_DIR);
 			
 			String program = "openmrs@" + coreVersion;

@@ -94,13 +94,13 @@ public class BuildDistro extends AbstractTask {
 		File userDir = new File(System.getProperty("user.dir"));
 
 		Artifact distroArtifact = null;
-		DistroProperties distroProperties = null;
+		Optional<DistroProperties> distroProperties = Optional.empty();
 
 		if (distro == null) {
 			File distroFile = new File(userDir, DistroProperties.DISTRO_FILE_NAME);
 			if (distroFile.exists()) {
 				wizard.showMessage("Building distribution from the distro file at " + distroFile + "...\n");
-				distroProperties = new DistroProperties(distroFile);
+				distroProperties = Optional.of(new DistroProperties(distroFile));
 			} else if (Project.hasProject(userDir)) {
 				Project config = Project.loadProject(userDir);
 				distroArtifact = DistroHelper
@@ -113,33 +113,33 @@ public class BuildDistro extends AbstractTask {
 						.extractFileFromDistro(buildDirectory, distroArtifact, DistroProperties.DISTRO_FILE_NAME);
 
 				if (distroFile.exists()) {
-					distroProperties = new DistroProperties(distroFile);
+					distroProperties = Optional.of(new DistroProperties(distroFile));
 				} else {
 					wizard.showMessage("Couldn't find " + DistroProperties.DISTRO_FILE_NAME + " in " + distroArtifact);
 				}
 			}
 		} else if (StringUtils.isNotBlank(distro)) {
-			distroProperties = distroHelper.resolveDistroPropertiesForStringSpecifier(distro, versionsHelper);
+			distroProperties = Optional.ofNullable(distroHelper.resolveDistroPropertiesForStringSpecifier(distro, versionsHelper));
 		}
 
-		if (distroProperties == null) {
+		if (!distroProperties.isPresent()) {
 			Server server = new Server.ServerBuilder().build();
 
 			wizard.promptForRefAppVersionIfMissing(server, versionsHelper, DISTRIBUTION_VERSION_PROMPT);
 			if (DistroHelper.isRefapp2_3_1orLower(server.getDistroArtifactId(), server.getVersion())) {
-				distroProperties = new DistroProperties(server.getVersion());
+				distroProperties = Optional.of(new DistroProperties(server.getVersion()));
 			} else {
-				distroProperties = distroHelper.downloadDistroProperties(buildDirectory, server);
+				distroProperties = Optional.ofNullable(distroHelper.downloadDistroProperties(buildDirectory, server));
 				distroArtifact = new Artifact(server.getDistroArtifactId(), server.getVersion(), server.getDistroGroupId(),
 						"jar");
 			}
 		}
 
-		if (distroProperties == null) {
+		if (!distroProperties.isPresent()) {
 			throw new MojoExecutionException("The distro you specified, '" + distro + "' could not be retrieved");
 		}
 
-		String distroName = buildDistro(buildDirectory, distroArtifact, distroProperties);
+		String distroName = buildDistro(buildDirectory, distroArtifact, distroProperties.get());
 
 		wizard.showMessage(
 				"The '" + distroName + "' distribution created! To start up the server run 'docker-compose up' from "
@@ -449,10 +449,10 @@ public class BuildDistro extends AbstractTask {
 	}
 
 	private void copyBuildDistroResource(String resource, File target) throws MojoExecutionException {
-		URL resourceUrl = getClass().getClassLoader().getResource("build-distro/web/" + resource);
-		if (resourceUrl != null && !target.exists()) {
+		Optional<URL> resourceUrl = Optional.ofNullable(getClass().getClassLoader().getResource("build-distro/web/" + resource));
+		if (resourceUrl.isPresent() && !target.exists()) {
 			try {
-				FileUtils.copyURLToFile(resourceUrl, target);
+				FileUtils.copyURLToFile(resourceUrl.get(), target);
 			}
 			catch (IOException e) {
 				throw new MojoExecutionException(
@@ -462,23 +462,23 @@ public class BuildDistro extends AbstractTask {
 	}
 
 	private void renameWebApp(File targetDirectory) throws MojoExecutionException {
-		File[] warFiles = targetDirectory.listFiles(new FilenameFilter() {
+		Optional<File[]> warFiles = Optional.ofNullable(targetDirectory.listFiles(new FilenameFilter() {
 
 			@Override
 			public boolean accept(File dir, String name) {
 				return name.endsWith(".war");
 			}
-		});
+		}));
 
-		if (warFiles != null) {
-			for (File file : warFiles) {
+		if (warFiles.isPresent()) {
+			for (File file : warFiles.get()) {
 				wizard.showMessage("file:" + file.getAbsolutePath());
 			}
 
 			wizard.showMessage("target:" + targetDirectory);
 
-			if (warFiles.length == 1) {
-				boolean renameSuccess = warFiles[0].renameTo(new File(targetDirectory, OPENMRS_WAR));
+			if (warFiles.get().length == 1) {
+				boolean renameSuccess = warFiles.get()[0].renameTo(new File(targetDirectory, OPENMRS_WAR));
 				if (!renameSuccess) {
 					throw new MojoExecutionException("Failed to rename openmrs '.war' file");
 				}

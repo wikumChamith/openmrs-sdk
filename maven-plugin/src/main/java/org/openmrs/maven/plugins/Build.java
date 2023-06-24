@@ -69,9 +69,9 @@ public class Build extends AbstractServerTask {
 				File userDir = new File(System.getProperty("user.dir"));
 				if (Project.hasProject(userDir)) {
 					Optional<Project> project = Optional.of(Project.loadProject(userDir));
-					Optional<String> artifactId = Optional.ofNullable(project.get().getArtifactId());
-					Optional<String> groupId = Optional.ofNullable(project.get().getGroupId());
-					Optional<String> version = Optional.ofNullable(project.get().getVersion());
+					Optional<String> artifactId = project.map(Project::getArtifactId);
+					Optional<String> groupId = project.map(Project::getGroupId);
+					Optional<String> version = project.map(Project::getVersion);
 					if ((artifactId.isPresent()) && (groupId.isPresent()) && version.isPresent()) {
 						projectDetected = true;
 						boolean buildMavenProject = wizard.promptYesNo(String.format(
