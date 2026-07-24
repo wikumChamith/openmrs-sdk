@@ -101,7 +101,8 @@ public class ArtifactHelper {
 				goal("verify-files"),
 				configuration(
 						verifyFilesArtifacts(openmrsArtifacts, directory),
-						element("failOnMissingSignature", "false")
+						element("failOnMissingSignature", "false"),
+						element("signatureRepository", SDKConstants.OPENMRS_SIGNATURE_REPOSITORY)
 				),
 				executionEnvironment(
 						mavenEnvironment.getMavenProject(),
