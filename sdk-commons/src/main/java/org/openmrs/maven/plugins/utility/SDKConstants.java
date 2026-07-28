@@ -23,7 +23,7 @@ public class SDKConstants {
     public static final String PGPVERIFY_PLUGIN_GROUP_ID = "org.openmrs.maven.plugins";
     public static final String PGPVERIFY_PLUGIN_ARTIFACT_ID = "openmrs-pgpverify-maven-plugin";
     public static final String PGPVERIFY_PLUGIN_VERSION = "1.0.1";
-public static final String OPENMRS_SIGNATURE_REPOSITORY = "https://mavenrepo.openmrs.org/public";
+    public static final String OPENMRS_SIGNATURE_REPOSITORY = "https://mavenrepo.openmrs.org/public";
     // archetype plugin
     public static final String ARCHETYPE_PLUGIN_GROUP_ID = "org.apache.maven.plugins";
     public static final String ARCHETYPE_PLUGIN_ARTIFACT_ID = "maven-archetype-plugin";

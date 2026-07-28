@@ -5,6 +5,10 @@ import org.openmrs.maven.plugins.model.Artifact;
 import org.twdata.maven.mojoexecutor.MojoExecutor;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,10 +67,6 @@ public class ArtifactHelper {
 							mavenEnvironment.getPluginManager()
 					)
 			);
-
-			if (!unpack) {
-				verifySignatures(java.util.Collections.singletonList(artifact), directory);
-			}
 		}
 	}
 
@@ -102,7 +102,9 @@ public class ArtifactHelper {
 				configuration(
 						verifyFilesArtifacts(openmrsArtifacts, directory),
 						element("failOnMissingSignature", "false"),
-						element("signatureRepository", SDKConstants.OPENMRS_SIGNATURE_REPOSITORY)
+						element("signatureRepository", SDKConstants.OPENMRS_SIGNATURE_REPOSITORY),
+						element("keyServer", "https://keyserver.ubuntu.com"),
+						element("keyRings", element("keyRing", signingKeyRing().getAbsolutePath()))
 				),
 				executionEnvironment(
 						mavenEnvironment.getMavenProject(),
@@ -110,6 +112,40 @@ public class ArtifactHelper {
 						mavenEnvironment.getPluginManager()
 				)
 		);
+	}
+
+	private static final String SIGNING_KEY_RESOURCE = "openmrs-signing-key.asc";
+
+	private static volatile File signingKeyRingFile;
+
+	/**
+	 * Extracts the bundled OpenMRS public key to a temp file so it can be passed as a keyRing. The
+	 * plugin checks the ring before contacting the key server, so the common path verifies offline
+	 * and only a rotated key not in the ring falls back to the (explicitly configured) key server.
+	 */
+	private static File signingKeyRing() throws MojoExecutionException {
+		File file = signingKeyRingFile;
+		if (file == null || !file.exists()) {
+			synchronized (ArtifactHelper.class) {
+				file = signingKeyRingFile;
+				if (file == null || !file.exists()) {
+					try (InputStream in = ArtifactHelper.class.getClassLoader().getResourceAsStream(SIGNING_KEY_RESOURCE)) {
+						if (in == null) {
+							throw new MojoExecutionException("Missing bundled signing key resource: " + SIGNING_KEY_RESOURCE);
+						}
+						File tmp = File.createTempFile("openmrs-signing-key", ".asc");
+						tmp.deleteOnExit();
+						Files.copy(in, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+						signingKeyRingFile = tmp;
+						file = tmp;
+					}
+					catch (IOException e) {
+						throw new MojoExecutionException("Failed to extract bundled signing key", e);
+					}
+				}
+			}
+		}
+		return file;
 	}
 
 	static boolean isOpenmrsArtifact(Artifact artifact) {
