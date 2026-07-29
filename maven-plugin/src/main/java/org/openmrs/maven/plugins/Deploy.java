@@ -369,17 +369,15 @@ public class Deploy extends AbstractServerTask {
 	 */
 	public void deployModule(String groupId, String artifactId, String version, Server server)
 			throws MojoExecutionException {
-		List<Element> artifactItems = new ArrayList<>();
 		Artifact artifact = getModuleArtifactForSelectedParameters(groupId, artifactId, version);
 
 		File modules = new File(server.getServerDirectory(), SDKConstants.OPENMRS_SERVER_MODULES);
 		modules.mkdirs();
-		artifactItems.add(artifact.toElement(modules.getPath()));
 
 		boolean moduleRemoved = deleteModuleFromServer(artifact, modules, server);
 
 		if (moduleRemoved) {
-			executeMojoPlugin(artifactItems);
+			moduleInstaller.installModule(artifact, modules.getPath());
 
 			server.setModuleProperties(artifact);
 			server.saveAndSynchronizeDistro();
