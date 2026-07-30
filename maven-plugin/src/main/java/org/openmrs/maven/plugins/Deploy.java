@@ -351,6 +351,7 @@ public class Deploy extends AbstractServerTask {
 		List<Element> artifactItems = new ArrayList<>();
 		artifactItems.add(artifact.toElement(server.getServerDirectory().getPath()));
 
+		// Deploys the current project's own core build (deploy-from-directory).
 		executeMojoPlugin(artifactItems);
 
 		server.setPlatformVersion(mavenProject.getVersion());
