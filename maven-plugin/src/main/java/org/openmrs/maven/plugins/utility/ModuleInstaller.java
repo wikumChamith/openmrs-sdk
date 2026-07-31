@@ -165,5 +165,17 @@ public class ModuleInstaller {
                         mavenEnvironment.getPluginManager()
                 )
         );
+
+        if (GOAL_COPY.equals(goal)) {
+            try {
+                mavenEnvironment.getArtifactHelper().verifySignatures(Arrays.asList(artifacts), new File(outputDir));
+            }
+            catch (MojoExecutionException e) {
+                for (Artifact artifact : artifacts) {
+                    FileUtils.deleteQuietly(new File(outputDir, artifact.getDestFileName()));
+                }
+                throw e;
+            }
+        }
     }
 }

@@ -272,6 +272,7 @@ public class DeployIT extends AbstractSdkIT {
         addAnswer("y");
         executeTask("deploy");
         assertSuccess();
+        verifier.verifyTextInLog("PGP verification checked");
         assertModulesInstalled(testServerId, "owa-1.4.omod");
         assertModuleUpdated(testServerId, "owa", "1.4");
     }

@@ -18,3 +18,8 @@ To regenerate this distribution:
 mvn openmrs-sdk:build-distro -Ddistro=openmrs-distro.properties
 ```
 Add `-Dreset` to overwrite any files you have customised.
+
+Downloaded `org.openmrs` modules, WARs and OWAs are verified against the OpenMRS GPG
+signing key. Artifacts without a signature are logged and skipped; an artifact whose
+signature is present but invalid fails the build. Content packages and the frontend SPA
+are not verified.

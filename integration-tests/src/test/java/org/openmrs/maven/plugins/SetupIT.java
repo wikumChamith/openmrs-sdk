@@ -46,6 +46,7 @@ public class SetupIT extends AbstractSdkIT {
         executeTask("setup");
 
         assertSuccess();
+        verifier.verifyTextInLog("PGP verification checked");
         assertServerInstalled(serverId);
         assertFilePresent(serverId, "openmrs-1.11.5.war");
         assertFilePresent(serverId, "modules");
