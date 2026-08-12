@@ -3,6 +3,7 @@ package org.openmrs.maven.plugins.utility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang.text.StrSubstitutor;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -24,7 +25,12 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Enumeration;
@@ -65,8 +71,10 @@ public class PropertiesUtils {
 
 		try (InputStream in = Files.newInputStream(file.toPath())) {
 			loadPropertiesFromInputStream(in, properties);
+		} catch (MojoExecutionException e) {
+			throw new MojoExecutionException(file.getAbsolutePath() + ": " + e.getMessage(), e);
 		} catch (IOException e) {
-			throw new MojoExecutionException(e.getMessage(), e);
+			throw new MojoExecutionException(file.getAbsolutePath() + ": " + e.getMessage(), e);
 		}
 	}
 
@@ -95,14 +103,17 @@ public class PropertiesUtils {
 			throw new MojoExecutionException("The resource to load the properties from must be supplied");
 		}
 
-		try (InputStream in = PropertiesUtils.class.getClassLoader().getResourceAsStream(resource)) {
-			if (in == null) {
-				throw new MojoExecutionException("Could not load \"" + resource + "\" from the classpath");
-			}
+		InputStream resourceStream = PropertiesUtils.class.getClassLoader().getResourceAsStream(resource);
+		if (resourceStream == null) {
+			throw new MojoExecutionException("Could not load \"" + resource + "\" from the classpath");
+		}
 
+		try (InputStream in = resourceStream) {
 			loadPropertiesFromInputStream(in, properties);
+		} catch (MojoExecutionException e) {
+			throw new MojoExecutionException("\"" + resource + "\": " + e.getMessage(), e);
 		} catch (IOException e) {
-			throw new MojoExecutionException(e.getMessage(), e);
+			throw new MojoExecutionException("\"" + resource + "\": " + e.getMessage(), e);
 		}
 	}
 
@@ -121,7 +132,9 @@ public class PropertiesUtils {
 
 	/**
 	 * Loads properties from an input stream into a Properties object
-	 *
+	 * Reads the stream as UTF-8 for compatibility. Malformed or non-UTF-8 byte sequences are
+	 * reported as an error rather than silently replaced, so a mis-encoded file fails the build
+	 * instead of producing corrupted property values.
 	 * @param in the input stream to load properties from
 	 * @param properties the properties object to load the properties into
 	 * @throws MojoExecutionException if an exception occurs reading or parsing the input stream
@@ -135,8 +148,19 @@ public class PropertiesUtils {
 			throw new MojoExecutionException("The properties object to load the properties into must not be null");
 		}
 
-		try {
-			properties.load(in);
+		CharsetDecoder strictUtf8Decoder = StandardCharsets.UTF_8.newDecoder()
+				.onMalformedInput(CodingErrorAction.REPORT)
+				.onUnmappableCharacter(CodingErrorAction.REPORT);
+
+		// Strips a leading UTF-8 byte-order mark, if present, before decoding. A BOM is valid
+		// UTF-8 (so the strict decoder above wouldn't reject it) but Properties.load() has no
+		// concept of it, and would otherwise fold the U+FEFF character into the first key.
+		try (InputStream bomStripped = BOMInputStream.builder().setInputStream(in).get();
+			 Reader reader = new InputStreamReader(bomStripped, strictUtf8Decoder)
+		) {
+			properties.load(reader);
+		} catch (CharacterCodingException e) {
+			throw new MojoExecutionException("The properties file is not valid UTF-8 - please re-save it with UTF-8 encoding", e);
 		} catch (IOException e) {
 			throw new MojoExecutionException(e.getMessage(), e);
 		}
@@ -240,7 +264,7 @@ public class PropertiesUtils {
 			while (entries.hasMoreElements()) {
 				ZipEntry zipEntry = entries.nextElement();
 				if ("distro.properties".equals(zipEntry.getName())) {
-					properties.load(zipFile.getInputStream(zipEntry));
+					loadPropertiesFromInputStream(zipFile.getInputStream(zipEntry), properties);
 				}
 			}
 		}
