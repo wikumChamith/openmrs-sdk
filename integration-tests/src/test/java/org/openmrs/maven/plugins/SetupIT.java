@@ -153,6 +153,10 @@ public class SetupIT extends AbstractSdkIT {
         assertFileNotPresent(serverId, "frontend");
 
         assertFilePresent(serverId, "configuration");
+
+        Server.setServersPath(testDirectory.getAbsolutePath());
+        Server server = Server.loadServer(serverId);
+        assertThat(server.getSpaProperties().isEmpty(), is(true));
     }
 
     @Test

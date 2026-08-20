@@ -324,6 +324,9 @@ public class Setup extends AbstractServerTask {
 		setJdk(server);
 
 		server.setValuesFromDistroProperties(distroProperties);
+		if (skipFrontend) {
+			server.removeSpaProperties();
+		}
 		server.setUnspecifiedToDefault();
 		server.save();
 	}
